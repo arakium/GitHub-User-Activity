@@ -3,6 +3,8 @@
 from __future__ import annotations
 from typing import Any, cast
 import requests
+from requests import status_codes
+
 from models.event import Event
 from models.repository import Repo
 from models.user import User
@@ -10,6 +12,11 @@ from models.user import User
 JSON = dict[str, Any]
 JSONArray = list[JSON]
 
+class GitHubAPIError(Exception):
+    """Exception handler"""
+    def __init__(self, message: str, status_code: int | None = None) -> None:
+        super().__init__(message)
+        self.status_code = status_code
 
 class GitHubClient:
     """Wrapper around the GitHub REST API endpoints used by this CLI."""
@@ -31,9 +38,16 @@ class GitHubClient:
         """Send a GET request to a GitHub API path and return the response."""
         url = f"{self._BASE_URL}{path}"
 
-        response = self._session.get(url=url, timeout=10)
-        response.raise_for_status()
-        return response
+        try:
+            response = self._session.get(url=url, timeout=10)
+            response.raise_for_status()
+            return response
+        except requests.exceptions.HTTPError as err:
+            raise GitHubAPIError(f"GitHub API request to {path} failed: {err}",
+            status_code=err.response.status_code if err.response else None) from err
+        except requests.exceptions.RequestException as err:
+            raise GitHubAPIError(f"Network error requesting: {path}: {err}") from err
+
 
     def get_user_events(self, username: str) -> list[Event]:
         """Fetch recent public events for a GitHub user."""
