@@ -8,7 +8,6 @@ from dotenv import load_dotenv
 
 from client import GitHubClient, GitHubAPIError
 
-load_dotenv()
 
 
 def get_username() -> str:
@@ -84,6 +83,7 @@ def choose_action() -> str:
 
 def main() -> None:
     """Application entry point."""
+    load_dotenv()
     token = os.getenv("GITHUB_KEY")
     if token is None:
         raise RuntimeError("GITHUB_KEY environment variable is not set.")
