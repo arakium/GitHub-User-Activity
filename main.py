@@ -1,11 +1,12 @@
+"""CLI entry point for viewing GitHub user profile, events, and repositories."""
+
 import argparse
 import os
-from time import sleep
 
 import requests
 from dotenv import load_dotenv
 
-from client import GitHubClient
+from client import GitHubClient, GitHubAPIError
 
 load_dotenv()
 
@@ -70,7 +71,7 @@ def print_user_repos(client: GitHubClient, username: str) -> None:
 
 
 def choose_action() -> str:
-    """Prompt the user for an action."""
+    """Display menu options and return the selected action key."""
     print(
         "\n"
         "1. User information\n"
@@ -94,34 +95,23 @@ def main() -> None:
         "1": print_user_info,
         "2": print_user_events,
         "3": print_user_repos,
-        "4": "quit"
     }
 
+    choice = choose_action()
+    action = actions.get(choice)
 
-    while True:
-        choice = choose_action()
-        if choice == "4":
-            print("\nExiting...\n")
-            break
-        action = actions.get(choice)
-        if action is None:
-            print("\nInvalid option.\n")
-            sleep(1)
-            continue
+    if action is None:
+        print("Invalid option.")
+        return
 
+    try:
+        action(client, username)
 
-        try:
-            action(client, username)
-            sleep(1)
-
-        except requests.HTTPError as e:
-            if e.response is not None and e.response.status_code == 404:
-                print(f"User '{username}' was not found.")
-            else:
-                print(f"HTTP error: {e}")
-
-        except requests.RequestException as e:
-            print(f"Network error: {e}")
+    except GitHubAPIError as err:
+        if err.status_code == 404:
+            print(f"User '{username}' was not found.")
+        else:
+            print(f"HTTP error: {err}")
 
 
 if __name__ == "__main__":
